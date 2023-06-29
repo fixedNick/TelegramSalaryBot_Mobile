@@ -8,6 +8,7 @@ namespace TelegramSalaryBot.Client;
 
 public interface IClient
 {
+    public long LocalID { get; set; } 
     public long TelegramID { get; set; }
     public string UserName { get; set; }
     public string FirstName { get; set; }

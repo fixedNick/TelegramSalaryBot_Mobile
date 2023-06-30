@@ -14,5 +14,5 @@ public interface IClient
     public string FirstName { get; set; }
     public string LastName { get; set; }
     public DateTime LastMessageTime { get; set; }
-    public MessageIdentity LastMessageID { get; set; }
+    public MessageIdentifier LastMessageID { get; set; }
 }

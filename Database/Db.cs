@@ -9,7 +9,7 @@ using System.Threading;
 
 using TelegramSalaryBot.Database.IO;
 using TelegramSalaryBot.Database.SQL;
-using TelegramSalaryBot.Database.Exceptions;
+using TelegramSalaryBot.Exceptions;
 
 namespace TelegramSalaryBot.Database;
 

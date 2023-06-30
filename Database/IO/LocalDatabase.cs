@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 using TelegramSalaryBot.Client;
 using TelegramSalaryBot.Database.SQL;
-using TelegramSalaryBot.Database.Exceptions;
+using TelegramSalaryBot.Exceptions;
 
 namespace TelegramSalaryBot.Database.IO;
 

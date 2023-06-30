@@ -8,7 +8,7 @@ using System.Threading.Tasks.Dataflow;
 using MySqlConnector;
 
 using TelegramSalaryBot.Client;
-using TelegramSalaryBot.Database.Exceptions;
+using TelegramSalaryBot.Exceptions;
 
 namespace TelegramSalaryBot.Database.SQL;
 

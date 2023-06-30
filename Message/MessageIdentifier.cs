@@ -6,7 +6,12 @@ using System.Threading.Tasks;
 
 namespace TelegramSalaryBot.Message;
 
-public enum MessageIdentity : int
+public enum MessageIdentifier : int
 {
-
+    Text,
+    ShowMenu,
+    AddJob,
+    AddSalary,
+    Jobs,
+    
 }

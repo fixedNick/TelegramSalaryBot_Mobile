@@ -10,10 +10,29 @@ public static class DBProps
 {
     public static readonly string DatabaseName = "TelegramSalary";
 
-    public static readonly string ClientsTable = "TelegramClients";
-    public static readonly string TelegramId = "TelegramId";
-    public static readonly string LocalId = "ID";
-    public static readonly string TelegramDomain = "Domain";
-    public static readonly string TelegramFistName = "FistName";
-    public static readonly string TelegramLastName = "LastName";
+    #region Clients Table
+    public static class Client
+    {
+        public static readonly string ClientsTable = "TelegramClients";
+
+        public static readonly string TelegramId = "TelegramId";
+        public static readonly string LocalId = "ID";
+        public static readonly string TelegramDomain = "Domain";
+        public static readonly string TelegramFistName = "FistName";
+        public static readonly string TelegramLastName = "LastName";
+        public static readonly string TelegramLastMessageTime = "LastMessageTime";
+        public static readonly string TelegramLastMessageId = "LastMessageID";
+    }
+    #endregion
+
+    #region Jobs Table
+    public static class Job
+    {
+        public static readonly string JobsTable = "Jobs";
+
+        public static readonly string ClientId = "ClientId";
+        public static readonly string JobName = "JobName";
+        public static readonly string Id = "ID";
+    }
+    #endregion
 }

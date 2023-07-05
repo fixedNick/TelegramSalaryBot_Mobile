@@ -1,14 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
+using System.Collections.Generic;
+
 using MySqlConnector;
 
 using TelegramSalaryBot.Client;
 using TelegramSalaryBot.Exceptions;
+using TelegramSalaryBot.Message;
+using TelegramSalaryBot.Jobs;
 
 namespace TelegramSalaryBot.Database.SQL;
 
@@ -28,7 +27,7 @@ public static class Sql
         using var connection = await OpenConnection();
 
         using var getClientCommand = connection.CreateCommand();
-        getClientCommand.CommandText = $"SELECT * FROM `{DBProps.ClientsTable}` WHERE `{DBProps.TelegramId}` = '@telegramIdValue'";
+        getClientCommand.CommandText = $"SELECT * FROM `{DBProps.Client.ClientsTable}` WHERE `{DBProps.Client.TelegramId}` = '@telegramIdValue'";
         getClientCommand.Parameters.AddWithValue("@telegramIdValue", tid);
         using var reader = await getClientCommand.ExecuteReaderAsync();
 
@@ -37,13 +36,19 @@ public static class Sql
         var client = default(TelegramClient);
         while (reader.Read())
         {
-            var localId = reader.GetInt64(DBProps.LocalId);
-            var clientId = reader.GetInt64(DBProps.TelegramId);
-            var domain = reader.GetString(DBProps.TelegramDomain);
-            var firstName = reader.GetString(DBProps.TelegramFistName);
-            var lastName = reader.GetString(DBProps.TelegramLastName);
+            var localId = reader.GetInt64(DBProps.Client.LocalId);
+            var clientId = reader.GetInt64(DBProps.Client.TelegramId);
+            var domain = reader.GetString(DBProps.Client.TelegramDomain);
+            var firstName = reader.GetString(DBProps.Client.TelegramFistName);
+            var lastName = reader.GetString(DBProps.Client.TelegramLastName);
+            var dateTime = reader.GetDateTime(DBProps.Client.TelegramLastMessageTime);
+            var identifier = reader.GetInt32(DBProps.Client.TelegramLastMessageId);
 
-            client = new TelegramClient(clientId, localId, domain, firstName, lastName);
+            client = new TelegramClient(clientId, localId, domain, firstName, lastName)
+            {
+                LastMessageID = (MessageIdentifier)identifier,
+                LastMessageTime = dateTime
+            };
         }
 
         await connection.CloseAsync();
@@ -54,18 +59,24 @@ public static class Sql
         using var connection = await OpenConnection();
 
         using var getClientsCommand = connection.CreateCommand();
-        getClientsCommand.CommandText = $"SELECT * FROM `{DBProps.ClientsTable}`";
+        getClientsCommand.CommandText = $"SELECT * FROM `{DBProps.Client.ClientsTable}`";
         using var reader = await getClientsCommand.ExecuteReaderAsync();
 
         var clients = new List<TelegramClient>();
         while(reader.Read())
         {
-            var localId = reader.GetInt64(DBProps.LocalId);
-            var telegramId = reader.GetInt64(DBProps.TelegramId);
-            var domain = reader.GetString(DBProps.TelegramDomain);
-            var firstName = reader.GetString(DBProps.TelegramFistName);
-            var lastName = reader.GetString(DBProps.TelegramLastName);
-            clients.Add(new TelegramClient(telegramId, localId, domain, firstName, lastName));
+            var localId = reader.GetInt64(DBProps.Client.LocalId);
+            var telegramId = reader.GetInt64(DBProps.Client.TelegramId);
+            var domain = reader.GetString(DBProps.Client.TelegramDomain);
+            var firstName = reader.GetString(DBProps.Client.TelegramFistName);
+            var lastName = reader.GetString(DBProps.Client.TelegramLastName);
+            var dateTime = reader.GetDateTime(DBProps.Client.TelegramLastMessageTime);
+            var identifier = reader.GetInt32(DBProps.Client.TelegramLastMessageId);
+            clients.Add(new TelegramClient(telegramId, localId, domain, firstName, lastName)
+            {
+                LastMessageID = (MessageIdentifier)identifier,
+                LastMessageTime = dateTime
+            });
         }
 
         await connection.CloseAsync();
@@ -91,8 +102,8 @@ public static class Sql
         using var connection = await OpenConnection();
 
         using var saveClientCommand = connection.CreateCommand();
-        saveClientCommand.CommandText = $"INSERT INTO `{DBProps.ClientsTable}` " +
-            $"(`{DBProps.TelegramId}`,`{DBProps.TelegramDomain}`,`{DBProps.TelegramFistName}`, `{DBProps.TelegramLastName}`) " +
+        saveClientCommand.CommandText = $"INSERT INTO `{DBProps.Client.ClientsTable}` " +
+            $"(`{DBProps.Client.TelegramId}`,`{DBProps.Client.TelegramDomain}`,`{DBProps.Client.TelegramFistName}`, `{DBProps.Client.TelegramLastName}`) " +
             $"VALUES (@tid, @domainVal,@fistNameVal,@lastNameVal)";
 
         saveClientCommand.Parameters.AddWithValue("@tid", client.TelegramID);
@@ -109,10 +120,66 @@ public static class Sql
         using var connection = await OpenConnection();
 
         using var command = connection.CreateCommand();
-        command.CommandText = $"SELECT MAX(ID) FROM `{DBProps.ClientsTable}`";
+        command.CommandText = $"SELECT MAX(ID) FROM `{DBProps.Client.ClientsTable}`";
         var result = await command.ExecuteScalarAsync();
 
         await connection.CloseAsync();
         return await Task.FromResult(result == DBNull.Value ? 1 : ( Convert.ToInt64(result) + 1) );
+    }
+
+    public static async Task UpdateLastMessageInfo(IClient client)
+    {
+        await Console.Out.WriteLineAsync("UpdateLastMessageInfo started");
+        using var connection = await OpenConnection();
+        using var updCommand = connection.CreateCommand();
+        updCommand.CommandText = $"UPDATE `{DBProps.Client.ClientsTable}` SET `{DBProps.Client.TelegramLastMessageId}` = @lastMessageId, `{DBProps.Client.TelegramLastMessageTime}` = @lastMessageTime WHERE `{DBProps.Client.TelegramId}` = '{client.TelegramID}'";
+        updCommand.Parameters.AddWithValue("@lastMessageId", client.LastMessageID);
+        updCommand.Parameters.AddWithValue("@lastMessageTime", client.LastMessageTime);
+
+        await updCommand.ExecuteNonQueryAsync();
+        await connection.CloseAsync();
+        await Console.Out.WriteLineAsync("UpdateLastMessageInfo finished");
+    }
+
+    public static async Task AddClientsJob(IClient client, string jobName)
+    {
+        await Console.Out.WriteLineAsync("Adding job started");
+
+        using var connection = await OpenConnection();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = $"INSERT INTO `{DBProps.Job.JobsTable}` (`{DBProps.Job.ClientId}`, `{DBProps.Job.JobName}`) VALUES (@clientId, @jobName)";
+        command.Parameters.AddWithValue("@clientId", client.LocalID);
+        command.Parameters.AddWithValue("@jobName", jobName);
+
+        await command.ExecuteNonQueryAsync();
+        await connection.CloseAsync();
+
+        await Console.Out.WriteLineAsync("Adding job finished");
+    }
+
+    public static async Task<List<Job>> GetClientJobs(IClient client)
+    {
+        await Console.Out.WriteLineAsync("Adding job started");
+        using var connection = await OpenConnection();
+
+
+        using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT * FROM `{DBProps.Job.JobsTable}` WHERE `{DBProps.Job.ClientId}` = @clientId";
+        command.Parameters.AddWithValue("@clientId", client.LocalID);
+        using var reader = await command.ExecuteReaderAsync();
+
+        var jobs = new List<Job>();
+        while(await reader.ReadAsync())
+        {
+            var jobName = reader.GetString(DBProps.Job.JobName);
+            var jobId = reader.GetInt32(DBProps.Job.Id);
+            jobs.Add(new Job(jobId, (int)client.LocalID, jobName));
+        }
+
+        await connection.CloseAsync();
+
+        await Console.Out.WriteLineAsync("Adding job finished");
+        return jobs;
     }
 }

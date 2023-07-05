@@ -13,6 +13,7 @@ using TelegramSalaryBot.Database.SQL;
 using TelegramSalaryBot.Exceptions;
 using Telegram.BotAPI.UpdatingMessages;
 using Telegram.BotAPI.InlineMode;
+using TelegramSalaryBot.Request;
 
 namespace TelegramSalaryBot;
 
@@ -39,7 +40,7 @@ public static class Program
                 {
                     try
                     {
-                        var message = IMessage.GetMessage(update);
+                        var message = MessageExtension.GetMessage(update);
                         ProcessUpdate(bot, message);
                     }
                     catch (EmptyMessageException)
@@ -69,7 +70,8 @@ public static class Program
             lock (syncObject)
             {
                 client = new TelegramClient(message.From.Id, Sql.GetNextLocalID().GetAwaiter().GetResult(), message.From.UserName,
-                                    message.From.FirstName, message.From.LastName);
+                                    message.From.FirstName, message.From.LastName)
+                { LastMessageID = MessageIdentifier.ShowMenu, LastMessageTime = DateTime.Now };
                 Db.SaveClient(client);
             }
             bot.SendMessage(client.TelegramID, "Hello, you successfully have been registered");
@@ -78,21 +80,30 @@ public static class Program
 
         try
         {
-            var messageIdentifier = IMessage.GetMessageIdentifier(message);
-            var response = IMessage.ProceedMessage(messageIdentifier, message.Text, client.LastMessageID);
+            var messageIdentifier = MessageExtension.GetMessageIdentifier(message);
+            client.SetupRequest(messageIdentifier);
+            var response = await client.CurrentRequest.FillRequest(client, message.Text);
+            await bot.SendMessageAsync(client.TelegramID, response.Text, replyMarkup: response.Keyboard ?? new ReplyKeyboardRemove(), parseMode: "HTML");
 
-            client.LastMessageTime = DateTime.Now;
-            client.LastMessageID = messageIdentifier;
+            if (client.CurrentRequest.IsRequestCompleted && client.CurrentRequest.IsNavigateRequired)
+            {
+                client.FinishCurrentRequest();
+                var firstResponse = await client.CurrentRequest.FillRequest(client, message.Text);
 
-            if (message.MessageType == UpdateType.CallbackQuery) await bot.AnswerCallbackQueryAsync(callbackQueryId: message.CallbackQueryId, " ", showAlert: false);
-            await bot.SendMessageAsync(client.TelegramID, response.Text, replyMarkup: response.Keyboard, parseMode: "HTML");
+                await client.UpdateLastResponse(firstResponse, client.CurrentRequest.Identifier);
+                await Sql.UpdateLastMessageInfo(client);
+                
+                await bot.SendMessageAsync(client.TelegramID, firstResponse.Text, replyMarkup: firstResponse.Keyboard ?? new ReplyKeyboardRemove(), parseMode: "HTML");
+            }
         } 
         catch(Exception e) when (e is UnknownMessageCommandException | e is UnknownCallbackDataException)
         {
-            if (message.MessageType == UpdateType.CallbackQuery) await bot.AnswerCallbackQueryAsync(client.TelegramID.ToString(), " ");
-            var errorMessage = IMessage.GetClientLasResponse(client);
-            bot.SendMessage(client.TelegramID, "Sorry, i didn't understand you, please try again");
-            bot.SendMessage(client.TelegramID, errorMessage.Text, replyMarkup: errorMessage.Keyboard, parseMode: "HTML");
+            await bot.SendMessageAsync(client.TelegramID, "Sorry, i didn't understand you, please try again");
+        }
+        finally
+        {
+            if (message.MessageType == UpdateType.CallbackQuery) 
+                await bot.AnswerCallbackQueryAsync(callbackQueryId: message.CallbackQueryId, " ", showAlert: false);
         }
     }
 }

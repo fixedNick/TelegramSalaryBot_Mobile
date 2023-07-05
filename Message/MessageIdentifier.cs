@@ -8,10 +8,10 @@ namespace TelegramSalaryBot.Message;
 
 public enum MessageIdentifier : int
 {
-    Text,
+    Text = 0,
     ShowMenu,
     AddJob,
+    GetJobs,
     AddSalary,
-    Jobs,
-    
+    GetSalary,
 }

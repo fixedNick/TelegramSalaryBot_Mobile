@@ -7,9 +7,8 @@ using Telegram.BotAPI.AvailableTypes;
 
 namespace TelegramSalaryBot.Message;
 
-public class MessageResponse
+public class ResponseMessage
 {
     public string Text { get; set; } = " ";
     public ReplyMarkup? Keyboard { get; set; } = null;
-    public MessageIdentifier Identifier { get; set; }
 }

@@ -1,0 +1,6 @@
+Написать класс Income
+Создать таблицу Income с полями:
+	- JobId
+	- ClientId
+	- Date
+	- Amount

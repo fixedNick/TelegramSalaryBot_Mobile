@@ -4,33 +4,36 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TelegramSalaryBot.Client;
+using TelegramSalaryBot.Exceptions;
 using TelegramSalaryBot.Jobs;
 using TelegramSalaryBot.Message;
+using TelegramSalaryBot.Database.SQL;
 
-namespace TelegramSalaryBot.Request;
+namespace TelegramSalaryBot.Request.Requests;
 
 public class AddJobRequest : IRequest
 {
     public IRequest NavigateTo { get; }
-    public bool IsNavigateRequired { get; } = true;
     public string JobName { get; private set; } = string.Empty;
-    public JobType JobType { get; }
+    public JobType JobType { get; private set; }
     public bool IsRequestCompleted { get; private set; } = false;
     public MessageIdentifier Identifier { get; private set; }
 
-    private int CurrentStep = 0;
-    private int TotalSteps = 3;
+    public int CurrentStep { get; private set; } = 0;
+    public int TotalSteps { get; private set; } = 3;
 
-    public AddJobRequest(IRequest navigateTo)
+    public AddJobRequest(IRequest? navigateTo = null)
     {
+        if (navigateTo == null) NavigateTo = IRequest.Menu;
+        else NavigateTo = navigateTo;
+
         Identifier = MessageIdentifier.AddJob;
-        NavigateTo = navigateTo;
     }
 
     public async Task<ResponseMessage> FillRequest(IClient client, string messageText)
     {
         var response = default(ResponseMessage);
-        switch(CurrentStep)
+        switch (CurrentStep)
         {
             case 0:
                 response = new ResponseMessage
@@ -49,15 +52,17 @@ public class AddJobRequest : IRequest
                 };
                 break;
             case 2:
-                if (Enum.GetNames(typeof(JobType)).Where(j => j.ToLower().Trim().Equals(messageText.ToLower().Trim())).FirstOrDefault() == default(string)) return new ResponseMessage { Text = "Incorrect type of job" };
+                if (Enum.GetNames(typeof(JobType)).Where(j => j.ToLower().Trim().Equals(messageText.ToLower().Trim())).FirstOrDefault() == default) return new ResponseMessage { Text = "Incorrect type of job" };
 
-                var selectedJobType = (JobType) Enum.Parse(typeof(JobType), messageText);
+                var selectedJobType = (JobType)Enum.Parse(typeof(JobType), messageText);
+                JobType = selectedJobType;
+                await Sql.AddClientsJob(client, JobName, JobType);
                 response = new ResponseMessage()
                 {
-                    Text = $"You successfully selected {selectedJobType.ToString()} as jobType for {JobName}"
+                    Text = $"You successfully selected {selectedJobType.ToString()} as jobType for {JobName}.\nList of your jobs has been updated"
                 };
                 break;
-            default: throw new Exception();
+            default: throw new UndefinedRequestStepException();
         }
 
         CurrentStep++;

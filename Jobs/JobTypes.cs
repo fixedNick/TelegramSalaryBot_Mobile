@@ -11,5 +11,6 @@ public enum JobType : int
     None = 0,
     Day,
     Night,
-    Halfday
+    Halfday,
+    ShiftWork
 }

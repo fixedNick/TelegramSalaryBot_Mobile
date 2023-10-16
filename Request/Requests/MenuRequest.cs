@@ -12,11 +12,11 @@ public class MenuRequest : IRequest
 {
     public IRequest NavigateTo { get; }
 
-    public bool IsNavigateRequired => false;
-
     public bool IsRequestCompleted => true;
 
     public MessageIdentifier Identifier { get; }
+    public int TotalSteps { get; } = 0;
+    public int CurrentStep { get; } = 0;
 
     public MenuRequest()
     {

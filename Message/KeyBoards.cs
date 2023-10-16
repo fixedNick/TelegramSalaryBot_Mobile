@@ -7,7 +7,10 @@ using Telegram.BotAPI;
 using Telegram.BotAPI.AvailableTypes;
 using TelegramSalaryBot.Client;
 using TelegramSalaryBot.Database.SQL;
+using TelegramSalaryBot.Exceptions;
 using TelegramSalaryBot.Jobs;
+using TelegramSalaryBot.Request;
+using static TelegramSalaryBot.Database.SQL.DBProps;
 
 namespace TelegramSalaryBot.Message;
 
@@ -35,20 +38,36 @@ internal static class KeyBoards
                     }
                 };
             case MessageIdentifier.AddSalary:
-                var jobs = await Sql.GetClientJobs(client);
-                var buttons = new List<InlineKeyboardButton>();
-                foreach (var j in jobs)
-                    buttons.Add(InlineButtonBuilder.SetCallbackData(j.Name, "jobid_" + j.Id));
-                return new InlineKeyboardMarkup
-                {
-                    InlineKeyboard = new InlineKeyboardButton[][]
-                    {
-                        buttons.ToArray()
-                    }
-                };
+                if (step == 0)
+                    return await GetJobsButtons(client, "addsalary");
+                throw new UndefinedRequestStepException();
+            case MessageIdentifier.GetJobs:
+                if (step == 0)
+                    return await GetJobsButtons(client, "getjobs");
+                throw new UndefinedRequestStepException();
+            case MessageIdentifier.GetSalary:
+                if(step == 0)
+                    return await GetJobsButtons(client, "getsalary");
+                throw new UndefinedRequestStepException();
             default: return new InlineKeyboardMarkup();
         }
     }
+
+    private static async Task<InlineKeyboardMarkup> GetJobsButtons(IClient client, string prefix)
+    {
+        var clientJobs = await Sql.GetClientJobs(client);
+        var getJobsButtons = new List<InlineKeyboardButton>();
+        foreach (var j in clientJobs)
+            getJobsButtons.Add(InlineButtonBuilder.SetCallbackData(j.Name, $"{prefix}-jobid_" + j.Id));
+        return new InlineKeyboardMarkup
+        {
+            InlineKeyboard = new InlineKeyboardButton[][]
+            {
+                            getJobsButtons.ToArray()
+            }
+        };
+    }
+
     public static async Task<ReplyMarkup?> GetReply(IClient client, MessageIdentifier identifier, int step = 0)
     {
         switch(identifier)
@@ -69,7 +88,32 @@ internal static class KeyBoards
 
                 }
                 break;
+            case MessageIdentifier.AddSalary:
+                if(step == 2)
+                {
+                    return new ReplyKeyboardMarkup()
+                    {
+                        Keyboard = new KeyboardButton[][]
+                        {
+                            new KeyboardButton[]
+                            {
+                                new ($"{DateTime.Now.Day}/{DateTime.Now.Month}/{DateTime.Now.Year}")
+                            }
+                        }
+                    };
+                }
+                break;
         }
         return null;
     }
+
+    public static async Task<ReplyMarkup?> GetReply(IClient client, IRequest request)
+    {
+        return await GetReply(client, request.Identifier, request.CurrentStep);
+    }
+    public static async Task<InlineKeyboardMarkup> GetInline(IClient client, IRequest request)
+    {
+        return await GetInline(client, request.Identifier, request.CurrentStep);
+    }
+
 }

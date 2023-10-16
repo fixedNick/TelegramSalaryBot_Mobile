@@ -85,7 +85,7 @@ public static class Program
             var response = await client.CurrentRequest.FillRequest(client, message.Text);
             await bot.SendMessageAsync(client.TelegramID, response.Text, replyMarkup: response.Keyboard ?? new ReplyKeyboardRemove(), parseMode: "HTML");
 
-            if (client.CurrentRequest.IsRequestCompleted && client.CurrentRequest.IsNavigateRequired)
+            if (client.CurrentRequest.IsRequestCompleted && client.CurrentRequest.Identifier != MessageIdentifier.ShowMenu)
             {
                 client.FinishCurrentRequest();
                 var firstResponse = await client.CurrentRequest.FillRequest(client, message.Text);
@@ -96,14 +96,20 @@ public static class Program
                 await bot.SendMessageAsync(client.TelegramID, firstResponse.Text, replyMarkup: firstResponse.Keyboard ?? new ReplyKeyboardRemove(), parseMode: "HTML");
             }
         } 
-        catch(Exception e) when (e is UnknownMessageCommandException | e is UnknownCallbackDataException)
+        catch(Exception e) when (e is UnknownMessageCommandException || e is UnknownCallbackDataException)
         {
             await bot.SendMessageAsync(client.TelegramID, "Sorry, i didn't understand you, please try again");
         }
         finally
         {
-            if (message.MessageType == UpdateType.CallbackQuery) 
-                await bot.AnswerCallbackQueryAsync(callbackQueryId: message.CallbackQueryId, " ", showAlert: false);
+            if (message.MessageType == UpdateType.CallbackQuery)
+            {
+                try
+                {
+                    await bot.AnswerCallbackQueryAsync(callbackQueryId: message.CallbackQueryId, " ", showAlert: false);
+                }
+                catch { }
+            }
         }
     }
 }

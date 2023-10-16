@@ -8,6 +8,7 @@ using TelegramSalaryBot.Client;
 using TelegramSalaryBot.Exceptions;
 using TelegramSalaryBot.Message;
 using TelegramSalaryBot.Jobs;
+using TelegramSalaryBot.Request.Requests;
 
 namespace TelegramSalaryBot.Database.SQL;
 
@@ -136,21 +137,23 @@ public static class Sql
         updCommand.Parameters.AddWithValue("@lastMessageId", client.LastMessageID);
         updCommand.Parameters.AddWithValue("@lastMessageTime", client.LastMessageTime);
 
+
         await updCommand.ExecuteNonQueryAsync();
         await connection.CloseAsync();
         await Console.Out.WriteLineAsync("UpdateLastMessageInfo finished");
     }
 
-    public static async Task AddClientsJob(IClient client, string jobName)
+    public static async Task AddClientsJob(IClient client, string jobName, JobType jobType)
     {
         await Console.Out.WriteLineAsync("Adding job started");
 
         using var connection = await OpenConnection();
 
         using var command = connection.CreateCommand();
-        command.CommandText = $"INSERT INTO `{DBProps.Job.JobsTable}` (`{DBProps.Job.ClientId}`, `{DBProps.Job.JobName}`) VALUES (@clientId, @jobName)";
+        command.CommandText = $"INSERT INTO `{DBProps.Job.JobsTable}` (`{DBProps.Job.ClientId}`, `{DBProps.Job.JobName}`, `{DBProps.Job.JobType}`) VALUES (@clientId, @jobName, @jobType)";
         command.Parameters.AddWithValue("@clientId", client.LocalID);
         command.Parameters.AddWithValue("@jobName", jobName);
+        command.Parameters.AddWithValue("@jobType", (int)jobType);
 
         await command.ExecuteNonQueryAsync();
         await connection.CloseAsync();
@@ -181,5 +184,53 @@ public static class Sql
 
         await Console.Out.WriteLineAsync("Adding job finished");
         return jobs;
+    }
+
+    public static async Task ClientAddSalary(IClient client, AddSalaryRequest addSalaryRequest)
+    {
+        await Console.Out.WriteLineAsync("Adding salary started");
+
+        using var connection = await OpenConnection();
+
+
+        using var command = connection.CreateCommand();
+        command.CommandText = $"INSERT INTO `{DBProps.Salary.Table}` (`{DBProps.Salary.ClientId}`,`{DBProps.Salary.JobId}`, `{DBProps.Salary.Income}`, `{DBProps.Salary.Date}`) VALUES ( @clientId, @jobId, @income, @date)";
+        command.Parameters.AddWithValue("clientId", client.LocalID);
+        command.Parameters.AddWithValue("jobId", addSalaryRequest.JobId);
+        command.Parameters.AddWithValue("income", addSalaryRequest.Income);
+        command.Parameters.AddWithValue("date", addSalaryRequest.Date.ToString("yyyy-MM-dd"));
+        await command.ExecuteNonQueryAsync();
+
+        await connection.CloseAsync();
+        
+        await Console.Out.WriteLineAsync("Adding salary finished");
+    }
+
+    public static async Task<double> GetClientMonthSalary(IClient client, int month, int jobid)
+    {
+        await Console.Out.WriteLineAsync("Getting salary started");
+
+        using var connection = await OpenConnection();
+
+
+        using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT * FROM `{DBProps.Salary.Table}` WHERE `{DBProps.Salary.ClientId}` = @clientId AND `{DBProps.Salary.JobId}` = @jobId";
+        command.Parameters.AddWithValue("@clientId", client.LocalID);
+        command.Parameters.AddWithValue("@jobId", jobid);
+        using var reader = await command.ExecuteReaderAsync();
+
+        var totalSalary = 0d;
+
+        while(await reader.ReadAsync())
+        {
+            var rowMonth = reader.GetDateTime(DBProps.Salary.Date).Month;
+            if (rowMonth != month) continue;
+            totalSalary += reader.GetDouble(DBProps.Salary.Income);
+        }
+
+        await connection.CloseAsync();
+
+        await Console.Out.WriteLineAsync("Getting salary finished");
+        return totalSalary;
     }
 }

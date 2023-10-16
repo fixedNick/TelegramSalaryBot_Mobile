@@ -21,6 +21,6 @@
   <ItemGroup>
     <PackageReference Include="MySqlConnector" Version="2.2.6" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="Telegram.BotAPI" Version="6.7.1" />
+    <PackageReference Include="Telegram.BotAPI" Version="6.9.0" />
   </ItemGroup>
 </Project>

@@ -10,10 +10,11 @@ namespace TelegramSalaryBot.Request;
 
 public interface IRequest
 {
-    static IRequest None = new MenuRequest();
+    public static IRequest Menu = new MenuRequest();
     public IRequest NavigateTo { get; }
-    public bool IsNavigateRequired { get; }
     public bool IsRequestCompleted { get; }
     public MessageIdentifier Identifier { get; }
     Task<ResponseMessage> FillRequest(IClient client, string messageText);
+    public int CurrentStep { get; }
+    public int TotalSteps { get; }
 }

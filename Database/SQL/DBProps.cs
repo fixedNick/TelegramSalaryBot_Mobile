@@ -32,7 +32,20 @@ public static class DBProps
 
         public static readonly string ClientId = "ClientId";
         public static readonly string JobName = "JobName";
+        public static readonly string JobType = "JobType";
         public static readonly string Id = "ID";
+    }
+    #endregion
+
+    #region Salary Table
+    public static class Salary
+    {
+        public static readonly string Table = "Salary";
+
+        public static readonly string ClientId = "ClientId";
+        public static readonly string JobId = "JobId";
+        public static readonly string Income = "Income";
+        public static readonly string Date = "Date";
     }
     #endregion
 }

@@ -14,14 +14,13 @@ namespace TelegramSalaryBot.Message;
 
 public static class MessageExtension
 {
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
     public static IMessage GetMessage(Update upd)
     {
         switch (upd.Type)
         {
             case UpdateType.CallbackQuery:
                 return new CallbackQueryMessage(
-                new MessageFrom(upd.CallbackQuery.From.Id,
+                new MessageFrom(upd.CallbackQuery!.From.Id,
                                 upd.CallbackQuery.From.FirstName ?? "",
                                 upd.CallbackQuery.From.LastName ?? "",
                                 upd.CallbackQuery.From.Username ?? ""),
@@ -29,7 +28,7 @@ public static class MessageExtension
 
             case UpdateType.Message:
                 return new TextMessage(
-                new MessageFrom(upd.Message.Chat.Id,
+                new MessageFrom(upd.Message!.Chat.Id,
                                 upd.Message.Chat.FirstName ?? "",
                                 upd.Message.Chat.LastName ?? "",
                                 upd.Message.Chat.Username ?? ""),
@@ -44,21 +43,32 @@ public static class MessageExtension
         switch (message.MessageType)
         {
             case UpdateType.Message:
-                if (cmd.Length >= 1 && cmd[0] != '/') return MessageIdentifier.Text;
-                if (StrContains(cmd, "start") || StrContains(cmd, "home")) return MessageIdentifier.ShowMenu;
-                if (StrContains(cmd, "addjob")) return MessageIdentifier.AddJob;
-                if (StrContains(cmd, "getsalary")) return MessageIdentifier.GetSalary;
-                throw new UnknownMessageCommandException(cmd);
+                return GetTextMessageIdentifier(cmd);
             case UpdateType.CallbackQuery:
-                if (StrEquals(cmd, "addjob")) return MessageIdentifier.AddJob;
-                if (StrEquals(cmd, "getjobs")) return MessageIdentifier.GetJobs;
-                if (StrEquals(cmd, "addsalary")) return MessageIdentifier.AddSalary;
-                if (StrEquals(cmd, "getsalary")) return MessageIdentifier.GetSalary;
-                throw new UnknownMessageCommandException(cmd);
+                return GetCallbackQueryIdentifier(cmd);
             default:
                 return MessageIdentifier.Text;
         }
     }
+
+    private static MessageIdentifier GetCallbackQueryIdentifier(string cmd)
+    {
+        if (StrEquals(cmd, "addjob")) return MessageIdentifier.AddJob;
+        if (StrContains(cmd, "getjobs")) return MessageIdentifier.GetJobs;
+        if (StrContains(cmd, "addsalary")) return MessageIdentifier.AddSalary;
+        if (StrContains(cmd, "getsalary")) return MessageIdentifier.GetSalary;
+        throw new UnknownMessageCommandException(cmd);
+    }
+    private static MessageIdentifier GetTextMessageIdentifier(string cmd) 
+    {
+        if (cmd.Length >= 1 && cmd[0] != '/') return MessageIdentifier.Text;
+        if (StrContains(cmd, "start") || StrContains(cmd, "home")) return MessageIdentifier.ShowMenu;
+        if (StrContains(cmd, "addjob")) return MessageIdentifier.AddJob;
+        if (StrContains(cmd, "getsalary")) return MessageIdentifier.GetSalary;
+     
+        throw new UnknownMessageCommandException(cmd);
+    }
+
     private static bool StrEquals(string s1, string s2) => s1.ToLower().Equals(s2);
-    private static bool StrContains(string cmd, string substr) => cmd.ToLower().Contains("/" + substr);
+    private static bool StrContains(string cmd, string substr) => cmd.ToLower().Contains(substr);
 }

@@ -12,10 +12,16 @@ public class Job
     public string Name { get; set; }
     public int ClientId { get; set; }
 
+    public Job() { }
     public Job(int id, int cid, string name)
     {
         Id = id;
         Name = name;
         ClientId = cid;
+    }
+
+    public override string ToString()
+    {
+        return Name;
     }
 }
